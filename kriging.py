@@ -2,6 +2,7 @@ import argparse
 import numpy as np
 import shelve
 from scipy.spatial.distance import squareform, cdist, pdist
+from scipy.optimize import minimize
 
 
 '''
@@ -31,6 +32,7 @@ optional arguments:
                                                 trained model file. (OPTIONAL) Default is "model.db".
   -s SCF, --scf SCF                             Specified Spatial Correlation Function to use when
                                                 training the surrogate. (OPTIONAL) Default is "standard".
+
 '''
 
 
@@ -40,7 +42,7 @@ class Kriging:
     # Function to compute beta for the ordinary Kriging algorithm
     def _compute_b(self):
         o = np.ones((self.x_data.shape[0], 1))  # Create a matrix of ones for calculating beta
-        beta = np.matmul(np.matmul(np.matmul(np.matmul(np.matmul(o.T, self.r_inv), o), o.T), self.r_inv), self.y_data)
+        beta = np.linalg.multi_dot([o.T, self.r_inv, o, o.T, self.r_inv, self.y_data])
         return beta
 
     # Function to compute the specified SCF
@@ -66,8 +68,26 @@ class Kriging:
         r = self._scf_compute(dist)  # Compute the SCF and return R inverse
         return np.linalg.inv(r)
 
+    # Function to calculate the Maximum Likelihood Estimator for use in the SCF parameter optimization
+    def _maximum_likelihood_estimator(self, x):
+        self.theta = x[0]  # Assign the passed theta to the current value
+        self.p = x[1]  # Assign the passed p to the current value
+        self.r_inv = self._compute_r_inv(self.x_data)   # Compute new r_inv
+        self.beta = self._compute_b()  # Compute new beta
+        n = self.x_data.shape[0]  # Number of training data points
+        y_b = self.y_data - np.matmul(np.ones((self.y_data.shape[0], 1)), self.beta)  # Compute (y - ones * beta)
+        sigma_sq = (1 / n) * np.linalg.multi_dot([y_b.T, self.r_inv, y_b])  # Compute sigma^2
+        sigma_sq = (1 / n) * np.matmul(np.matmul(y_b.T, self.r_inv), y_b)
+        mle = n * np.log(np.linalg.det(sigma_sq)) + np.log(np.linalg.det(np.linalg.inv(self.r_inv)))  # Compute MLE
+        return mle
+
     # Function to train a Kriging surrogate using the suplied data and options
     def _train(self):
+        x0 = np.array([self.theta, self.p])  # Create array of initial theta and p values for optimization
+        # Function to minmize the Maximum Likelihood Estimator to solve for theta and p
+        # Chose a limited-memory (L) Broyden-Fletcher-Goldsharb-Shanno (BFGS) algorithm with bounding constraints (B)
+        results = minimize(self._maximum_likelihood_estimator, x0, method='L-BFGS-B',
+                           bounds=((0.001,10), (0.001,2)), options={'gtol': 1e-8})
         self.r_inv = self._compute_r_inv(self.x_data)  # Compute and store R inverse in the class for further us
         self.beta = self._compute_b()  # Compute and store beta in the class for future use
 
@@ -76,7 +96,7 @@ class Kriging:
     def _predict(self):
         r = self._scf_compute(self._compute_dist(self.x_train, self.x_data)).T  # Find r using the prediction locations
         y_b = self.y_data - np.matmul(np.ones((self.y_data.shape[0], 1)), self.beta)  # Compute (y - ones * beta)
-        self.y_pred = self.beta + np.matmul(np.matmul(r, self.r_inv), y_b)  # Compute predictions at the locations
+        self.y_pred = self.beta + np.linalg.multi_dot([r, self.r_inv, y_b])  # Compute predictions at the locations
 
     # Initialization for the Kriging class
     # Defaults are specified for the options, required to pass in whether you are training or predicting
@@ -152,3 +172,4 @@ if __name__ == "__main__":
 
     # Create and run the RBF class object
     surrogate = Kriging(opts.type, opts.x_file, opts.y_file, opts.model_file, opts.scf)
+    print(surrogate.theta, surrogate.p)

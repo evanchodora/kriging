@@ -11,6 +11,26 @@ https://github.com/evanchodora/kriging
 
 Evan Chodora (2019)
 echodor@clemson.edu
+
+Can be used with one currently coded Spatial Correlation Function (SCF) and can be used with both
+multi-dimensional inputs and multi-dimensional outputs (and scalars for both).
+
+Program Usage:
+
+kriging.py [-h] -t {train,predict} [-x X_FILE] [-y Y_FILE] [-m MODEL_FILE] [-s SCF]
+
+optional arguments:
+  -h, --help                                    Show help message and exit.
+  -t {train,predict}, --type {train,predict}    Specify whether the tool is to be used for training
+                                                with "train" or making predictions with a stored model
+                                                with "predict". (REQUIRED)
+  -x X_FILE                                     Input file of x locations. (OPTIONAL) Default is "x_train.dat".
+  -y Y_FILE                                     Output file for surrogate training. (OPTIONAL) Default is
+                                                "y_train.dat".
+  -m MODEL_FILE, --model MODEL_FILE             File to save the model output or use a previously
+                                                trained model file. (OPTIONAL) Default is "model.db".
+  -s SCF, --scf SCF                             Specified Spatial Correlation Function to use when
+                                                training the surrogate. (OPTIONAL) Default is "standard".
 '''
 
 
@@ -49,13 +69,14 @@ class Kriging:
     # Function to train a Kriging surrogate using the suplied data and options
     def _train(self):
         self.r_inv = self._compute_r_inv(self.x_data)  # Compute and store R inverse in the class for further us
-        self.beta = self._compute_b()
+        self.beta = self._compute_b()  # Compute and store beta in the class for future use
 
     # Function to use a previously trained Kriging surrogate for predicting at new x locations
+    # y_pred = beta + r.T * r_inv * (y - ones * beta)
     def _predict(self):
         r = self._scf_compute(self._compute_dist(self.x_train, self.x_data)).T  # Find r using the prediction locations
-        y_b = self.y_data - np.matmul(np.ones((self.y_data.shape[0], 1)), self.beta)
-        self.y_pred = self.beta + np.matmul(np.matmul(r, self.r_inv), y_b)
+        y_b = self.y_data - np.matmul(np.ones((self.y_data.shape[0], 1)), self.beta)  # Compute (y - ones * beta)
+        self.y_pred = self.beta + np.matmul(np.matmul(r, self.r_inv), y_b)  # Compute predictions at the locations
 
     # Initialization for the Kriging class
     # Defaults are specified for the options, required to pass in whether you are training or predicting

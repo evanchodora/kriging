@@ -1,6 +1,7 @@
 import argparse
 import numpy as np
 import shelve
+from scipy.spatial.distance import squareform, cdist, pdist
 
 
 '''
@@ -10,12 +11,36 @@ https://github.com/evanchodora/kriging
 
 Evan Chodora (2019)
 echodor@clemson.edu
-
 '''
 
 
 # Class to create or use a Kriging surrogate model
 class Kriging:
+
+    # Function to compute beta for the ordinary Kriging algorithm
+    def _compute_b(self):
+        o = np.ones((self.x_data.shape[0], 1))  # Create a matrix of ones for calculating beta
+        print(self.r_inv)
+        beta = np.matmul(np.matmul(np.matmul(np.matmul(np.matmul(o.T, self.r_inv), o), o.T), self.r_inv), self.y_data)
+        return beta
+
+    # Function to compute the Euclidean distance (r)
+    def _compute_r(self, a, b=None):
+        if b is not None:
+            # Return the euclidean distance matrix between two matrices (or vectors)
+            r = np.exp(-self.theta * cdist(a, b, 'euclidean') ** 1)
+            return r
+        else:
+            # Return a square matrix form of the the pairwise euclidean distance for the training locations
+            r = np.exp(-self.theta * squareform(pdist(a, 'euclidean')) ** 1)
+            return r
+
+    def _train(self):
+        r = self._compute_r(self.x_data)  # Compute the R matrix
+        self.r_inv = np.linalg.inv(r)  # Compute and store R inverse in the class for further use
+        self.beta = self._compute_b()
+        print(self.beta)
+
 
     # Initialization for the Kriging class
     # Defaults are specified for the options, required to pass in whether you are training or predicting
@@ -31,13 +56,16 @@ class Kriging:
             self.y_data = np.loadtxt(y_file, skiprows=1, delimiter=",")  # Read output data file
             self.y_data = self.y_data.reshape(self.y_data.shape[0], -1)  # Reshape into 2D matrix (avoids array issues)
 
+            # Set initial values for theta and p
+            self.theta = 0.5  # 0 < theta
+            self.p = 1.0  # 0 < p < 2
+
             self._train()  # Run the model training function
 
-            # Store model parameters in a Python shelve database
-            db = shelve.open(self.model_db)
-            db['x_train'] = self.x_data
-
-            db.close()
+            # # Store model parameters in a Python shelve database
+            # db = shelve.open(self.model_db)
+            # db['x_train'] = self.x_data
+            # db.close()
 
         else:
             # Read previously stored model data from the database

@@ -20,27 +20,42 @@ class Kriging:
     # Function to compute beta for the ordinary Kriging algorithm
     def _compute_b(self):
         o = np.ones((self.x_data.shape[0], 1))  # Create a matrix of ones for calculating beta
-        print(self.r_inv)
         beta = np.matmul(np.matmul(np.matmul(np.matmul(np.matmul(o.T, self.r_inv), o), o.T), self.r_inv), self.y_data)
         return beta
 
-    # Function to compute the Euclidean distance (r)
-    def _compute_r(self, a, b=None):
-        if b is not None:
-            # Return the euclidean distance matrix between two matrices (or vectors)
-            r = np.exp(-self.theta * cdist(a, b, 'euclidean') ** 1)
+    # Function to compute the specified SCF
+    def _scf_compute(self, dist):
+        if self.scf_func == 'standard':
+            r = np.exp(-1 * self.theta * dist ** self.p)
             return r
         else:
+            raise ValueError("Not a currently coded SCF")
+
+    # Function to compute the Euclidean distance (r)
+    def _compute_dist(self, a, b=None):
+        if b is not None:
+            # Return the euclidean distance matrix between two matrices (or vectors)
+            return cdist(a, b, 'euclidean')
+        else:
             # Return a square matrix form of the the pairwise euclidean distance for the training locations
-            r = np.exp(-self.theta * squareform(pdist(a, 'euclidean')) ** 1)
-            return r
+            return squareform(pdist(a, 'euclidean'))
 
+    # Function to compute the inverse of the R (SCF) matrix for the Kriging formula
+    def _compute_r_inv(self, a, b=None):
+        dist = self._compute_dist(a, b)  # Compute the Euclidean distance matrix
+        r = self._scf_compute(dist)  # Compute the SCF and return R inverse
+        return np.linalg.inv(r)
+
+    # Function to train a Kriging surrogate using the suplied data and options
     def _train(self):
-        r = self._compute_r(self.x_data)  # Compute the R matrix
-        self.r_inv = np.linalg.inv(r)  # Compute and store R inverse in the class for further use
+        self.r_inv = self._compute_r_inv(self.x_data)  # Compute and store R inverse in the class for further us
         self.beta = self._compute_b()
-        print(self.beta)
 
+    # Function to use a previously trained Kriging surrogate for predicting at new x locations
+    def _predict(self):
+        r = self._scf_compute(self._compute_dist(self.x_train, self.x_data)).T  # Find r using the prediction locations
+        y_b = self.y_data - np.matmul(np.ones((self.y_data.shape[0], 1)), self.beta)
+        self.y_pred = self.beta + np.matmul(np.matmul(r, self.r_inv), y_b)
 
     # Initialization for the Kriging class
     # Defaults are specified for the options, required to pass in whether you are training or predicting
@@ -62,15 +77,25 @@ class Kriging:
 
             self._train()  # Run the model training function
 
-            # # Store model parameters in a Python shelve database
-            # db = shelve.open(self.model_db)
-            # db['x_train'] = self.x_data
-            # db.close()
+            # Store model parameters in a Python shelve database
+            db = shelve.open(self.model_db)
+            db['x_train'] = self.x_data
+            db['y_train'] = self.y_data
+            db['beta'] = self.beta
+            db['r_inv'] = self.r_inv
+            db['theta'] = self.theta
+            db['p'] = self.p
+            db.close()
 
         else:
             # Read previously stored model data from the database
             model_data = shelve.open(model_db)
             self.x_train = model_data['x_train']
+            self.y_data	= model_data['y_train']
+            self.beta = model_data['beta']
+            self.r_inv = model_data['r_inv']
+            self.theta = model_data['theta']
+            self.p = model_data['p']
             model_data.close()
 
             self._predict()  # Run the model prediction functions

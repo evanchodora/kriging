@@ -57,10 +57,10 @@ class Kriging:
     def _compute_dist(self, a, b=None):
         if b is not None:
             # Return the euclidean distance matrix between two matrices (or vectors)
-            return cdist(a, b, 'euclidean')
+            return cdist(a, b, 'minkowski', p=2)
         else:
             # Return a square matrix form of the the pairwise euclidean distance for the training locations
-            return squareform(pdist(a, 'euclidean'))
+            return squareform(pdist(a, 'minkowski', p=2))
 
     # Function to compute the inverse of the R (SCF) matrix for the Kriging formula
     def _compute_r_inv(self, a, b=None):
@@ -76,8 +76,10 @@ class Kriging:
         self.beta = self._compute_b()  # Compute new beta
         n = self.x_data.shape[0]  # Number of training data points
         y_b = self.y_data - np.matmul(np.ones((self.y_data.shape[0], 1)), self.beta)  # Compute (y - ones * beta)
-        sigma_sq = (1 / n) * np.linalg.multi_dot([y_b.T, self.r_inv, y_b])  # Compute sigma^2
-        sigma_sq = (1 / n) * np.matmul(np.matmul(y_b.T, self.r_inv), y_b)
+        sigma_sq = (1 / n) * np.matmul(np.matmul(y_b.T, self.r_inv), y_b)  # Compute sigma^2
+        # sigma_sq represents the the multivariate covariance matrix between the outputs so should take the determinant
+        # of that matrix in order to apply the mle equation (if there is only one output then sigma_sq is a 1x1 matrix
+        # so this approach still applies fine)
         mle = n * np.log(np.linalg.det(sigma_sq)) + np.log(np.linalg.det(np.linalg.inv(self.r_inv)))  # Compute MLE
         return mle
 
@@ -87,7 +89,7 @@ class Kriging:
         # Function to minmize the Maximum Likelihood Estimator to solve for theta and p
         # Chose a limited-memory (L) Broyden-Fletcher-Goldsharb-Shanno (BFGS) algorithm with bounding constraints (B)
         results = minimize(self._maximum_likelihood_estimator, x0, method='L-BFGS-B',
-                           bounds=((0.001,10), (0.001,2)), options={'gtol': 1e-8})
+                           bounds=((0.01,10), (0.01,1.99)), options={'gtol': 1e-8})
         self.r_inv = self._compute_r_inv(self.x_data)  # Compute and store R inverse in the class for further us
         self.beta = self._compute_b()  # Compute and store beta in the class for future use
 

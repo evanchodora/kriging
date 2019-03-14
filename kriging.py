@@ -53,13 +53,13 @@ class Kriging:
         else:
             raise ValueError("Not a currently coded SCF")
 
-    # Function to compute the Euclidean distance (r)
+    # Function to compute the distance matrices - r = (x-c)
     def _compute_dist(self, a, b=None):
         if b is not None:
-            # Return the euclidean distance matrix between two matrices (or vectors)
+            # Return the distance matrix between two matrices (or vectors)
             return cdist(a, b, 'minkowski', p=2)
         else:
-            # Return a square matrix form of the the pairwise euclidean distance for the training locations
+            # Return a square matrix form of the the pairwise distance for the training locations
             return squareform(pdist(a, 'minkowski', p=2))
 
     # Function to compute the inverse of the R (SCF) matrix for the Kriging formula
@@ -89,7 +89,7 @@ class Kriging:
         # Function to minmize the Maximum Likelihood Estimator to solve for theta and p
         # Chose a limited-memory (L) Broyden-Fletcher-Goldsharb-Shanno (BFGS) algorithm with bounding constraints (B)
         results = minimize(self._maximum_likelihood_estimator, x0, method='L-BFGS-B',
-                           bounds=((0.01,10), (0.01,1.99)), options={'gtol': 1e-8})
+                           bounds=((0.01,10), (0.1,1.99)), options={'gtol': 1e-8})
         self.r_inv = self._compute_r_inv(self.x_data)  # Compute and store R inverse in the class for further us
         self.beta = self._compute_b()  # Compute and store beta in the class for future use
 

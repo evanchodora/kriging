@@ -7,7 +7,11 @@ Evan Chodora - echodor@clemson.edu
 Can be used with one currently coded Spatial Correlation Function (SCF) and can be used with both
 multi-dimensional inputs and multi-dimensional outputs (and scalars for both).
 
-Makes use of the SciPy optimize toolbox for the MLE minimization process. Specifically, the 'L-BFGS_B' (a limited-memory
+Makes use of the Spatial Distance calculation functions from SciPy to compute the radial distance matrices for the
+radial basis function calculations.
+(https://docs.scipy.org/doc/scipy/reference/spatial.distance.html)
+
+Makes use of the SciPy optimize toolbox for the MLE minimization process. Specifically, the 'L-BFGS-B' (a limited-memory
 (L) Broyden-Fletcher-Goldsharb-Shanno (BFGS) algorithm with bounding constraints (B)) is used.
 (https://docs.scipy.org/doc/scipy/reference/optimize.html)
 (https://docs.scipy.org/doc/scipy/reference/optimize.minimize-lbfgsb.html)

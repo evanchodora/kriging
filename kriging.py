@@ -137,6 +137,13 @@ class Kriging:
             db['r_inv'] = self.r_inv
             db['theta'] = self.theta
             db['p'] = self.p
+            print('\nSurrogate Data:')
+            print('SCF Function: ', model_data['SCF_func'])
+            print('Optimized Theta: ', model_data['theta'])
+            print('Optimized P: ', model_data['p'])
+            print('R Inverse: ', '\n', model_data['r_inv'])
+            print('Beta: ', '\n', model_data['beta'])            
+            print('\n', 'Trained surrogate stored in: ', self.model_db)
             db.close()
 
         else:
@@ -150,6 +157,7 @@ class Kriging:
             self.p = model_data['p']
             model_data.close()
 
+            print('\nUsing', self.model_db, 'to predict values...')
             self._predict()  # Run the model prediction functions
 
             # Quick loop to add a header that matches the input file format
@@ -160,6 +168,7 @@ class Kriging:
             # Convert header list of strings to a single string with commas and write out the predictions to a file
             header = ','.join(y_head)
             np.savetxt('y_pred.dat', self.y_pred, delimiter=',', fmt="%.6f", header=header, comments='')
+            print('Predicted values stored in \"y_pred.dat\"')
 
 # Code to run when called from the command line (usual behavior)
 if __name__ == "__main__":
@@ -183,4 +192,3 @@ if __name__ == "__main__":
 
     # Create and run the RBF class object
     surrogate = Kriging(opts.type, opts.x_file, opts.y_file, opts.model_file, opts.scf)
-    print(surrogate.theta, surrogate.p)

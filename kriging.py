@@ -142,7 +142,7 @@ class Kriging:
             db['theta'] = self.theta
             db['p'] = self.p
             print('\nSurrogate Data:')
-            print('SCF Function: ', db['SCF_func'])
+            print('SCF Function: ', self.scf_func)
             print('Optimized Theta: ', db['theta'])
             print('Optimized P: ', db['p'])
             print('R Inverse: ', '\n', db['r_inv'])

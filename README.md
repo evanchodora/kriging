@@ -31,6 +31,10 @@ generated using a standard SCF and the model is stored in the file `model.db`. W
 the RBF weights will be computed and the model paramter objects will be saved as a Python shelve
 (https://docs.python.org/3/library/shelve.html) database for later use.
 
+Optimization of the `theta` and `p` in the Spatial Correlation Function is handled by using the SciPy Python
+optimization library using a bounded optimization algorithm that bounds the two design variables appropriately during
+minimization of the Maximum Likelihood Estimator (see `self._maximum_likelihood_estimator` function for more details). 
+
 ### Prediction Example
 The code below creates an output file `y_pred.dat` based on the supplied previously trained surrogate model, `model.db`,
 at the query locations specified in `x_pred.dat`:

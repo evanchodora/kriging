@@ -72,7 +72,7 @@ class Kriging:
         else:
             # Return a square matrix form of the the pairwise distance for the training locations
             # p=1: r = (x - c)
-            # p=2: r = sqrt((x - c) ** 2) = ||x - c|| (Euclidean Norm)            
+            # p=2: r = sqrt((x - c) ** 2) = ||x - c|| (Euclidean Norm)
             return squareform(pdist(a, 'minkowski', p=2))
 
     # Function to compute the inverse of the R (SCF) matrix for the Kriging formula
@@ -142,11 +142,11 @@ class Kriging:
             db['theta'] = self.theta
             db['p'] = self.p
             print('\nSurrogate Data:')
-            print('SCF Function: ', model_data['SCF_func'])
-            print('Optimized Theta: ', model_data['theta'])
-            print('Optimized P: ', model_data['p'])
-            print('R Inverse: ', '\n', model_data['r_inv'])
-            print('Beta: ', '\n', model_data['beta'])
+            print('SCF Function: ', db['SCF_func'])
+            print('Optimized Theta: ', db['theta'])
+            print('Optimized P: ', db['p'])
+            print('R Inverse: ', '\n', db['r_inv'])
+            print('Beta: ', '\n', db['beta'])
             print('\n', 'Trained surrogate stored in: ', self.model_db)
             db.close()
 
